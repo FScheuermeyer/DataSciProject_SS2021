@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from gensim.models import Word2Vec
-import seaborn as sns
+#import seaborn as sns
 #from sklearn.datasets import fetch_mldata
 #from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
@@ -49,6 +49,7 @@ def calc_freuqency_df():
     return df_freuqency
 
 def create_listoflists():
+    # TDOD: Probs useless
     df1 = df[["venue_cat_name"]]
     df2 = df1.apply(lambda x: ','.join(x.astype(str)), axis=1)
     df_clean = pd.DataFrame({'clean': df2})
@@ -57,10 +58,12 @@ def create_listoflists():
     return listoflists
 
 def create_model(listoflists):
+    # TODO: CHeck what params do
     model = Word2Vec(listoflists, min_count=1,size= 50,workers=3, window =3, sg = 1)
     return model
 
 def cosine_distance(model, word, target_list, num):
+    # TODO: DO urself
     cosine_dict ={}
     word_list = []
     a = model[word]
@@ -79,6 +82,7 @@ def cosine_distance_matrix(model, target_list):
 
 # following only for visualization of closest word (T-SNE Vis)
 def display_closestwords_tsnescatterplot(model, word, size):
+    # TODO: Do yourself
     arr = np.empty((0, size), dtype='f')
     word_labels = [word]
     close_words = model.similar_by_word(word)
@@ -100,16 +104,63 @@ def display_closestwords_tsnescatterplot(model, word, size):
     plt.ylim(y_coords.min() + 0.00005, y_coords.max() + 0.00005)
     plt.show()
 
+def create_location_plot():
+    plt.scatter(x=(df['long']), y=(df['lat']), alpha=0.5, label="Data Entries")
+    plt.scatter(x=-73.935242, y=40.730610, color='red', label="New York City")
+    plt.xlabel('Longitude')
+    plt.ylabel('Latidude')
+    plt.legend()
+    plt.savefig('locations.png')
+    plt.show()
+
+def create_users_activity_compare_plot():
+    abc = df['user_id'].value_counts()
+    a = 0
+    b = 0
+    c = 0
+    d = 0
+    e = 0
+    f = 0
+    g = 0
+    for key in abc:
+        if key == 100:
+            a = a + 1
+        if ((key > 100) and (key <= 500)):
+            b = b + 1
+        if key > 500 and key <= 1000:
+            c = c + 1
+        if key > 1000 and key <= 1500:
+            d = d + 1
+        if key > 1500 and key <= 2000:
+            e = e + 1
+        if key > 2000 and key <= 2500:
+            f = f + 1
+        if key > 2500:
+            g = g + 1
+    lister = []
+    lister.append(a)
+    lister.append(b)
+    lister.append(c)
+    lister.append(d)
+    lister.append(e)
+    lister.append(f)
+    lister.append(g)
+    print(lister)
+    plt.hist(abc, bins=10)
+    plt.xlabel('Number of data entries with same userID')
+    plt.ylabel('Number of userIDs')
+    plt.savefig('compare_user_activity.png')
+    plt.show()
 
 if __name__ == '__main__':
     columns = ["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"]
     df = create_dataframe("Project3_Data/dataset_NYC.txt", columns)
     user_col = ["user_id", "ls_cats", "mean_loc"]
-    df_users = -1
-    model = create_model(create_listoflists())
-    list_of_unique_venue_cat = list(df.venue_cat_name.unique())
-    print(cosine_distance(model, 'Subway', list_of_unique_venue_cat, 5))
-    display_closestwords_tsnescatterplot(model, 'Subway', 50)
+    #df_users = -1
+    #model = create_model(create_listoflists())
+    #list_of_unique_venue_cat = list(df.venue_cat_name.unique())
+    #print(cosine_distance(model, 'Subway', list_of_unique_venue_cat, 5))
+    #display_closestwords_tsnescatterplot(model, 'Subway', 50)
     #freq_df = pd.read_csv("Project3_Data/df_freq.csv")
     #freq_df = calc_freuqency_df()
     #print(freq_df)
@@ -117,3 +168,4 @@ if __name__ == '__main__':
     #    print(calc_mean_loc(user))
     #for column in df.columns:
      #   print("For column ", column, " unique values: ", df[column].nunique())
+    create_users_activity_compare_plot()
