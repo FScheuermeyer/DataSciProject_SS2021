@@ -32,7 +32,7 @@ def calc_freuquency_for_id(id):
     idx_df_bool = df["user_id"] == id
     idx_df = df[idx_df_bool]
     a = idx_df["venue_cat_name"].value_counts()
-    return a
+    return a/idx_df.shape[0]
 
 def calc_freuqency_df():
     keys = df["venue_cat_name"].unique()
@@ -105,12 +105,15 @@ def display_closestwords_tsnescatterplot(model, word, size):
     plt.show()
 
 def create_location_plot():
+    #idx_df_bool = df["venue_cat_name"] == "University"
+    #filtered_df = df[idx_df_bool]
     plt.scatter(x=(df['long']), y=(df['lat']), alpha=0.5, label="Data Entries")
+    #plt.scatter(x=(filtered_df['long']), y=(filtered_df['lat']), color='pink', label="Bridge Entries")
     plt.scatter(x=-73.935242, y=40.730610, color='red', label="New York City")
     plt.xlabel('Longitude')
     plt.ylabel('Latidude')
     plt.legend()
-    plt.savefig('locations.png')
+    #plt.savefig('locations.png')
     plt.show()
 
 def create_users_activity_compare_plot():
@@ -146,11 +149,43 @@ def create_users_activity_compare_plot():
     lister.append(f)
     lister.append(g)
     print(lister)
-    plt.hist(abc, bins=10)
+    plt.hist(abc, bins=7)
     plt.xlabel('Number of data entries with same userID')
     plt.ylabel('Number of userIDs')
-    plt.savefig('compare_user_activity.png')
+    #plt.savefig('compare_user_activity.png')
     plt.show()
+
+def similar_users(userID, freq_df):
+    maxValuesfreq_df = freq_df.max(axis=1)
+    maxCatfreq_df = freq_df.idxmax(axis=1)
+    #print(maxValuesfreq_df.idxmin())
+    cat = maxCatfreq_df[userID]
+    max_value = maxValuesfreq_df[userID]
+    print("User: ", userID, ", cat: ", cat, ", max: ", max_value)
+    freq_dict = {}
+    i = 0
+    similar_users = [None] * 5
+    for user, value in maxCatfreq_df.items():
+        if (user == userID):
+            continue
+        if (cat == value):
+            tmp_diff = abs(max_value - maxValuesfreq_df[user])
+            freq_dict[user] = tmp_diff
+    sorted_freq_dict = dict(sorted(freq_dict.items(), key=lambda item: item[1]))
+    for key in sorted_freq_dict:
+        if (i == 5):
+            break
+        if (i == 0):
+            similar_users[i] = key
+            i = i + 1
+        if (similar_users[i - 1] != key):
+            similar_users[i] = key
+            i = i + 1
+    print(similar_users)
+    for i in similar_users:
+        None
+        #print("User: ", i, ", cat: ", maxCatfreq_df[i], ", max: ", maxValuesfreq_df[i])
+    return similar_users
 
 if __name__ == '__main__':
     columns = ["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"]
@@ -161,11 +196,15 @@ if __name__ == '__main__':
     #list_of_unique_venue_cat = list(df.venue_cat_name.unique())
     #print(cosine_distance(model, 'Subway', list_of_unique_venue_cat, 5))
     #display_closestwords_tsnescatterplot(model, 'Subway', 50)
-    #freq_df = pd.read_csv("Project3_Data/df_freq.csv")
+    freq_df = pd.read_csv("Project3_Data/df_freq.csv", index_col=0)
     #freq_df = calc_freuqency_df()
-    #print(freq_df)
+    similar_users(382, freq_df)
+    #print(freq_df.loc[470])
+    #for users in maxValuesfreq_df.index:
+
     #for user in df.user_id:
     #    print(calc_mean_loc(user))
     #for column in df.columns:
      #   print("For column ", column, " unique values: ", df[column].nunique())
-    create_users_activity_compare_plot()
+    #create_users_activity_compare_plot()
+    #create_location_plot()
