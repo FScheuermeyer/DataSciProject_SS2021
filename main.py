@@ -49,7 +49,7 @@ def calc_freuqency_df():
     return df_freuqency
 
 def create_listoflists():
-    # TDOD: Probs useless
+    # TODO: Probs useless
     df1 = df[["venue_cat_name"]]
     df2 = df1.apply(lambda x: ','.join(x.astype(str)), axis=1)
     df_clean = pd.DataFrame({'clean': df2})
@@ -57,9 +57,15 @@ def create_listoflists():
     print(listoflists[0:2])
     return listoflists
 
-def create_model(listoflists):
+def create_vocab(arr):
+    vocab_list = []
+    for elem in arr:
+        vocab_list.append(elem.split()[0])
+    return vocab_list
+
+def create_model(vocab):
     # TODO: CHeck what params do
-    model = Word2Vec(listoflists, min_count=1,size= 50,workers=3, window =3, sg = 1)
+    model = Word2Vec(vocab, min_count=1)
     return model
 
 def cosine_distance(model, word, target_list, num):
@@ -76,6 +82,10 @@ def cosine_distance(model, word, target_list, num):
     for item in dist_sort:
         word_list.append((item[0], item[1]))
     return word_list[0:num]
+
+def cosine_distance_calc(vec1, vec2):
+    cos_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+    return cos_sim
 
 def cosine_distance_matrix(model, target_list):
     M_cosine = np.zeros((df.venue_cat_name.nunique(),df.venue_cat_name.nunique()))
@@ -196,9 +206,9 @@ if __name__ == '__main__':
     #list_of_unique_venue_cat = list(df.venue_cat_name.unique())
     #print(cosine_distance(model, 'Subway', list_of_unique_venue_cat, 5))
     #display_closestwords_tsnescatterplot(model, 'Subway', 50)
-    freq_df = pd.read_csv("Project3_Data/df_freq.csv", index_col=0)
+    #freq_df = pd.read_csv("Project3_Data/df_freq.csv", index_col=0)
     #freq_df = calc_freuqency_df()
-    similar_users(382, freq_df)
+    #similar_users(382, freq_df)
     #print(freq_df.loc[470])
     #for users in maxValuesfreq_df.index:
 
@@ -208,3 +218,5 @@ if __name__ == '__main__':
      #   print("For column ", column, " unique values: ", df[column].nunique())
     #create_users_activity_compare_plot()
     #create_location_plot()
+    arr = df['venue_cat_name'].unique()
+    arr = create_vocab(arr)
