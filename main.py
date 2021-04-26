@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
 from gensim.models import Word2Vec
+import gensim.downloader as api
 #import seaborn as sns
 #from sklearn.datasets import fetch_mldata
-#from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
@@ -67,6 +68,17 @@ def create_model(vocab):
     # TODO: CHeck what params do
     model = Word2Vec(vocab, min_count=1)
     return model
+
+def creater_even_newer_model(vocab):
+    model = api.load("glove-wiki-gigaword-50")
+    model_2 = Word2Vec(size=300, min_count=1)
+    model_2.build_vocab(vocab)
+    total = model_2.corpus_count
+    model_2.build_vocab([list(model.vocab.keys())], update=True)
+    #intersect word2vec format allows for exactly what we want, but I cant use it properly yet.
+    model_2.intersect_word2vec_format(model, binary=True, lockf=1.0)
+    model_2.train(vocab, total_examples=total, epochs=model_2.iter)
+    return model_2
 
 def cosine_distance(model, word, target_list, num):
     # TODO: DO urself
@@ -220,3 +232,5 @@ if __name__ == '__main__':
     #create_location_plot()
     arr = df['venue_cat_name'].unique()
     arr = create_vocab(arr)
+    model = creater_even_newer_model(arr)
+    print(model.most_similar("Coffee"))
