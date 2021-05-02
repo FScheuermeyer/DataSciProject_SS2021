@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
+import re
 from gensim.models import Word2Vec
 import gensim.downloader as api
 #import seaborn as sns
 #from sklearn.datasets import fetch_mldata
-from sklearn.decomposition import PCA
+#from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
@@ -144,24 +145,15 @@ def create_listoflists():
 def create_vocab(arr):
     vocab_list = []
     for elem in arr:
-        vocab_list.append(elem.split()[0])
+        if re.findall('[^A-Za-z]', elem):
+            vocab_list.append('cafe')
+            continue
+        vocab_list.append(elem.split()[0].lower())
     return vocab_list
 
-def create_model(vocab):
-    # TODO: CHeck what params do
-    model = Word2Vec(vocab, min_count=1)
-    return model
-
-def creater_even_newer_model(vocab):
+def create_model():
     model = api.load("glove-wiki-gigaword-50")
-    model_2 = Word2Vec(size=300, min_count=1)
-    model_2.build_vocab(vocab)
-    total = model_2.corpus_count
-    model_2.build_vocab([list(model.vocab.keys())], update=True)
-    #intersect word2vec format allows for exactly what we want, but I cant use it properly yet.
-    model_2.intersect_word2vec_format(model, binary=True, lockf=1.0)
-    model_2.train(vocab, total_examples=total, epochs=model_2.iter)
-    return model_2
+    return model
 
 def cosine_distance(model, word, target_list, num):
     # TODO: DO urself
@@ -179,11 +171,22 @@ def cosine_distance(model, word, target_list, num):
     return word_list[0:num]
 
 def cosine_distance_calc(vec1, vec2):
-    cos_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-    return cos_sim
+    cos_dist = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+    return cos_dist
 
-def cosine_distance_matrix(model, target_list):
-    M_cosine = np.zeros((df.venue_cat_name.nunique(),df.venue_cat_name.nunique()))
+def cosine_distance_matrix(vocab, model):
+    n = len(vocab)
+    matrix = np.zeros(shape=(n,n))
+    i=-1
+    j=-1
+    for word1 in vocab:
+        i += 1
+        for word2 in vocab:
+            j += 1
+            matrix[i][j] = cosine_distance_calc(model[word1], model[word2])
+    return matrix
+
+
 
 # following only for visualization of closest word (T-SNE Vis)
 def display_closestwords_tsnescatterplot(model, word, size):
@@ -333,7 +336,7 @@ if __name__ == '__main__':
     #for column in df.columns:
      #   print("For column ", column, " unique values: ", df[column].nunique())
     #create_users_activity_compare_plot()
-    create_location_plot()
+    #create_location_plot()
     #arr = df['venue_cat_name'].unique()
     #arr = create_vocab(arr)
     #model = creater_even_newer_model(arr)
@@ -343,3 +346,9 @@ if __name__ == '__main__':
     #test_list = find_similar_loc_dist(test_id_array)
     #entry = get_dataframe_entries(test_list)
     #print(entry.venue_cat_name)
+    all_words = df['venue_cat_name'].unique()
+    vocab = create_vocab(all_words)
+    my_model = create_model()
+    i = 0
+    len_words = len(vocab)
+
