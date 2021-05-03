@@ -145,10 +145,14 @@ def create_listoflists():
 def create_vocab(arr):
     vocab_list = []
     for elem in arr:
-        if re.findall('[^A-Za-z]', elem):
-            vocab_list.append('cafe')
+        word = elem.split()[0].lower()
+        if re.findall('[^A-Za-z]', word):
+            if re.findall('[^A-Za-z]', word) == '-':
+                word = elem.split('-')[0].lower()
+            else:
+                word = 'cafe'
             continue
-        vocab_list.append(elem.split()[0].lower())
+        vocab_list.append(word)
     return vocab_list
 
 def create_model():
@@ -177,16 +181,29 @@ def cosine_distance_calc(vec1, vec2):
 def cosine_distance_matrix(vocab, model):
     n = len(vocab)
     matrix = np.zeros(shape=(n,n))
-    i=-1
-    j=-1
-    for word1 in vocab:
-        i += 1
-        for word2 in vocab:
-            j += 1
-            matrix[i][j] = cosine_distance_calc(model[word1], model[word2])
+    for i in range(n):
+        for j in range(n):
+            matrix[i][j] = cosine_distance_calc(model[vocab[i]], model[vocab[j]])
     return matrix
 
+def save_cos_dist_matrix(vocab):
+    my_model = create_model()
+    matrix = cosine_distance_matrix(vocab, my_model)
+    np.savetxt('similarity_matrix.csv', matrix)
 
+def get_most_similar(matrix, vocab, word):
+    index = vocab.index(word)
+    sim = 0
+    res_index = index
+    for i in range(len(vocab)):
+        if index == i:
+            continue
+        tmp = matrix[index][i]
+        if tmp > sim:
+            sim = tmp
+            res_index = i
+    print("For word " + word + ", " + vocab[res_index] + " is the most similar")
+    return vocab[res_index]
 
 # following only for visualization of closest word (T-SNE Vis)
 def display_closestwords_tsnescatterplot(model, word, size):
@@ -347,8 +364,14 @@ if __name__ == '__main__':
     #entry = get_dataframe_entries(test_list)
     #print(entry.venue_cat_name)
     all_words = df['venue_cat_name'].unique()
+    print(all_words)
     vocab = create_vocab(all_words)
-    my_model = create_model()
-    i = 0
-    len_words = len(vocab)
+    vocab = list(dict.fromkeys(vocab))
+    #save_cos_dist_matrix(vocab)
+    matrix = np.loadtxt('similarity_matrix.csv', usecols=range(len(vocab)))
+    word = vocab[3]
+    print(vocab)
+    get_most_similar(matrix, vocab, word)
+
+
 
