@@ -15,133 +15,6 @@ from sklearn.manifold import TSNE
 def create_dataframe(file, colnames):
     return pd.read_csv(file, sep='\t', header=None, names=colnames)
 
-def calc_mean_loc_test(id):
-    idx_df = df[df["user_id"] == id]
-    idx_lat_rad = [np.radians(i) for i in idx_df["lat"].values]
-    idx_long_rad = [np.radians(i) for i in idx_df["long"].values]
-    idx_z_cart = [np.cos(i) for i in idx_lat_rad]
-    idx_x_cart = np.array([np.sin(i) for i in idx_lat_rad]) * np.array([np.cos(i) for i in idx_long_rad])
-    idx_y_cart = np.array([np.sin(i) for i in idx_lat_rad]) * np.array([np.sin(i) for i in idx_long_rad])
-    z_mean_cart = np.mean(idx_z_cart)
-    x_mean_cart = np.mean(idx_x_cart)
-    y_mean_cart = np.mean(idx_y_cart)
-    lat_mean = np.rad2deg(np.arctan2(z_mean_cart, np.sqrt(y_mean_cart ** 2 + x_mean_cart ** 2)))
-    long_mean = np.rad2deg(np.arctan2(y_mean_cart, x_mean_cart))
-    return (lat_mean, long_mean)
-
-def calc_mean_lat(id):
-    idx_df = df[df["user_id"] == id]
-    lat_array = idx_df['lat'].to_numpy()
-    lat_mean = np.mean(lat_array)
-    return (lat_mean)
-
-def calc_mean_long(id):
-    idx_df = df[df["user_id"] == id]
-    long_array = idx_df['long'].to_numpy()
-    long_mean = np.mean(long_array)
-    return (long_mean)
-
-def calc_mean_loc(id):
-    return (calc_mean_lat(id), calc_mean_long(id))
-
-def create_mean_loc_df():
-    df1 = df.copy()
-    df1 = df1.drop_duplicates(subset=['user_id'])
-    df1['mean_lat'] = df1.apply(lambda row: calc_mean_lat(row['user_id']), axis=1)
-    df1['mean_long'] = df1.apply(lambda row: calc_mean_long(row['user_id']), axis=1)
-    df1 = df1[['user_id','mean_lat', 'mean_long']]
-    df1.to_csv(r'Project3_Data/user_means.txt', index=False)
-    return df1
-
-def get_distance(lat1, lat2, lon1, lon2):
-  R = 6373.0
-
-  lat1 = np.radians(lat1)
-  lat2 = np.radians(lat2)
-  lon1 = np.radians(lon1)
-  lon2 = np.radians(lon2)
-
-  dlon = lon2 - lon1
-  dlat = lat2 - lat1
-
-  a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
-  c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
-
-  return R * c
-
-
-def find_locations_in_radius(id_lat, id_long, radius):
-    df1 = df.copy()
-    df1 = df1.drop_duplicates(subset=['venue_id'])
-    df1['dist'] = df1.apply(lambda row: get_distance(row['lat'], id_lat, row['long'], id_long), axis=1)
-    df1 = df1[['venue_id', 'dist']]
-    #print(df1.sort_values('dist')[0:10])
-    df1 = df1[df1['dist'] < radius]
-    loc_id_list = df1['venue_id'].to_numpy()
-    return loc_id_list
-    #print(df1.loc[df1['dist'] == df1['dist'].min()]['venue_id'])
-
-def find_matching_strings(string_list):
-    string_list.sort(key=len, reverse=True)
-    main_list = string_list[0]
-    for i in range(1,5):
-        mask = np.isin(main_list, string_list[i])
-        main_list = main_list[mask]
-    return main_list
-
-def find_similar_loc_dist(id_array):
-    cmp_list = []
-    radius = .5
-    increase_rate = 0
-    lister = []
-    while len(lister) == 0:
-        for user in id_array:
-            lat1 = calc_mean_lat(user)
-            long1 = calc_mean_long(user)
-            cmp_list.append(find_locations_in_radius(lat1, long1, radius + increase_rate))
-        lister = find_matching_strings(cmp_list)
-        increase_rate = increase_rate + 0.1
-    print("Increase Rate was at ", increase_rate)
-    print("Radius was at ", increase_rate+radius)
-    return lister
-
-def get_dataframe_entries(lister):
-    #print(len(lister))
-    df1 = df[df['venue_id'].isin(lister)]
-    df1 = df1.drop_duplicates(subset=['venue_id'])
-    #print(df1['venue_cat_name'])
-    #return df1.iloc[0]
-    return df1
-
-def calc_freuquency_for_id(id):
-    idx_df_bool = df["user_id"] == id
-    idx_df = df[idx_df_bool]
-    a = idx_df["venue_cat_name"].value_counts()
-    return a/idx_df.shape[0]
-
-def calc_freuqency_df():
-    keys = df["venue_cat_name"].unique()
-    i=0
-    df_freuqency = pd.DataFrame(data=None, index=df.user_id.unique(), columns=keys)
-    for user in df.user_id.unique():
-        i= i+1
-        print("User ", i, " of 1083")
-        a = calc_freuquency_for_id(user)
-        for idx, freq in enumerate(a):
-            df_freuqency.at[user, a.index[idx]] = freq
-    df_freuqency.fillna(0, inplace=True)
-    df_freuqency.to_csv(r"Project3_Data/df_freq.csv")
-    return df_freuqency
-
-def create_listoflists():
-    # TODO: Probs useless
-    df1 = df[["venue_cat_name"]]
-    df2 = df1.apply(lambda x: ','.join(x.astype(str)), axis=1)
-    df_clean = pd.DataFrame({'clean': df2})
-    listoflists = [row.split(',') for row in df_clean['clean']]
-    print(listoflists[0:2])
-    return listoflists
-
 def create_vocab(arr):
     vocab_list = []
     for elem in arr:
@@ -233,21 +106,21 @@ def create_location_plot():
     #idx_df_bool = df["venue_cat_name"] == "University"
     #filtered_df = df[idx_df_bool]
     df1 = create_mean_loc_df()
-    test_id_array = [879, 1082, 296, 353, 1063]
+    test_id_array = [664, 472, 585, 315, 968]
     test_list = find_similar_loc_dist(test_id_array)
     entries = get_dataframe_entries(test_list)
     print(len(entries), entries.iloc[0].venue_cat_name)
-    radius = input("Enter Radius Value: ")
-    radius = float(radius)
-    radius = radius*10
+    #radius = input("Enter Radius Value: ")
+    #radius = float(radius)
+    radius = 1
     #print(entry.venue_cat_name)
     #plt.scatter(x=(df['long']), y=(df['lat']), alpha=0.2, label="Data Entries")
     #plt.scatter(x=(filtered_df['long']), y=(filtered_df['lat']), color='pink', label="Bridge Entries")
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[0], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[0], 'mean_lat'].iloc[0], alpha=0.4, color='coral', s=((2*radius)**2))
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[1], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[1], 'mean_lat'].iloc[0], alpha=0.4, color='purple', s=((2*radius+(df1.loc[df1['user_id'] == test_id_array[1], 'mean_lat'].iloc[0]*10))**2))
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[2], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[2], 'mean_lat'].iloc[0], alpha=0.4, color='green', s=((2*radius)**2))
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[3], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[3], 'mean_lat'].iloc[0], alpha=0.4, color='pink', s=((2*radius)**2))
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[4], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[4], 'mean_lat'].iloc[0], alpha=0.4, color='orange', s=((2*radius+(df1.loc[df1['user_id'] == test_id_array[4], 'mean_lat'].iloc[0]*10))**2))
+    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[0], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[0], 'mean_lat'].iloc[0], alpha=0.4, color='coral')
+    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[1], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[1], 'mean_lat'].iloc[0], alpha=0.4, color='purple')
+    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[2], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[2], 'mean_lat'].iloc[0], alpha=0.4, color='green')
+    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[3], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[3], 'mean_lat'].iloc[0], alpha=0.4, color='pink')
+    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[4], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[4], 'mean_lat'].iloc[0], alpha=0.4, color='orange')
     plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[0], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[0], 'mean_lat'].iloc[0], color='coral', label="Mean User 1")
     plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[1], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[1], 'mean_lat'].iloc[0], color='purple', label="Mean User 2")
     plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[2], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[2], 'mean_lat'].iloc[0], color='green', label="Mean User 3")
@@ -259,7 +132,7 @@ def create_location_plot():
     plt.xlabel('Longitude')
     plt.ylabel('Latidude')
     plt.legend()
-    #plt.savefig('locations.png')
+    plt.savefig('locations52.png')
     plt.show()
 
 def create_users_activity_compare_plot():
@@ -301,37 +174,203 @@ def create_users_activity_compare_plot():
     #plt.savefig('compare_user_activity.png')
     plt.show()
 
+### Here starts the block for Task2
+
+def get_dataframe_entries(lister):
+    #print(len(lister))
+    df1 = df[df['venue_id'].isin(lister)]
+    df1 = df1.drop_duplicates(subset=['venue_id'])
+    #print(df1['venue_cat_name'])
+    #return df1.iloc[0]
+    return df1
+
+def calc_frequency_for_id(id):
+    idx_df = df[df["user_id"] == id]            # get all df entries for specific user_id
+    a = idx_df["venue_cat_name"].value_counts() # get pandas series of unique venue_cat_names with # of appearances in
+                                                # user specific dataframe
+    return a/idx_df.shape[0]                    # return pandas series of unique venue_cat_names with # of appearances
+                                                # in user specific dataframe divided by # of all df entries in user
+                                                # specific dataframe
+
+def calc_freqency_df():
+    # this variable is only used to keep track of the progress
+    i = 0
+    # creating the dataframe without any data as it is being filled in the following loop
+    df_freqency = pd.DataFrame(data=None, index=df["user_id"].unique(), columns=df["venue_cat_name"].unique())
+    for user in df.user_id.unique():
+        i = i+1
+        print("User ", i, " of 1083")
+        # call method to calculate frequency for every unique user in the dataframe
+        a = calc_frequency_for_id(user)
+        # iterate over the resulting pandas series and fill up the frequency dataframe
+        for idx, freq in enumerate(a):
+            df_freqency.at[user, a.index[idx]] = freq
+    # hardly any users have entries for all unique venue category names, the current implementation keeps these
+    # "not-visited" datapoints as NaN values. To keep this new dataframe clean the NaN values are replaced with a 0.
+    # (Which also makes sense semantically, seeing how this user's frequency for this category is 0 if it was never
+    # visited by this user.)
+    df_freqency.fillna(0, inplace=True)
+    # save this dataframe in the data directory so when it is being used in the future it doesn't need to be calculated
+    # all over again.
+    df_freqency.to_csv(r"Project3_Data/df_freq.csv")
+    return df_freqency
+
 def similar_users(userID, freq_df):
     maxValuesfreq_df = freq_df.max(axis=1)
     maxCatfreq_df = freq_df.idxmax(axis=1)
-    #print(maxValuesfreq_df.idxmin())
     cat = maxCatfreq_df[userID]
     max_value = maxValuesfreq_df[userID]
-    print("User: ", userID, ", cat: ", cat, ", max: ", max_value)
+    print("User: ", userID, ", category: ", cat, ", value for category: ", max_value)
     freq_dict = {}
     i = 0
-    similar_users = [None] * 5
+    similar_users = [None] * 10
     for user, value in maxCatfreq_df.items():
         if (user == userID):
             continue
         if (cat == value):
-            tmp_diff = abs(max_value - maxValuesfreq_df[user])
-            freq_dict[user] = tmp_diff
+            freq_dict[user] = abs(max_value - maxValuesfreq_df[user])
     sorted_freq_dict = dict(sorted(freq_dict.items(), key=lambda item: item[1]))
+    #print(sorted_freq_dict)
     for key in sorted_freq_dict:
-        if (i == 5):
+        if (i == 10):
             break
-        if (i == 0):
+        else:
             similar_users[i] = key
-            i = i + 1
-        if (similar_users[i - 1] != key):
-            similar_users[i] = key
-            i = i + 1
+            i += 1
+        #if (i == 0):
+         #   similar_users[i] = key
+         #   i = i + 1
+        #if (similar_users[i - 1] != key):
+          #  similar_users[i] = key
+          #  i = i + 1
     print(similar_users)
     for i in similar_users:
         None
         #print("User: ", i, ", cat: ", maxCatfreq_df[i], ", max: ", maxValuesfreq_df[i])
     return similar_users
+
+### Here ends the block for Task2
+
+### Here starts the block for Task3
+
+def calc_mean_loc_radial(id):
+    # Get all dataframe entries for this specified user_id
+    idx_df = df[df["user_id"] == id]
+    # Create lists of all radians
+    idx_lat_rad = [np.radians(i) for i in idx_df["lat"].values]
+    idx_long_rad = [np.radians(i) for i in idx_df["long"].values]
+    # Create list/numpy arrays of all cartesian coordinates
+    idx_z_cart = [np.cos(i) for i in idx_lat_rad]
+    idx_x_cart = np.array([np.sin(i) for i in idx_lat_rad]) * np.array([np.cos(i) for i in idx_long_rad])
+    idx_y_cart = np.array([np.sin(i) for i in idx_lat_rad]) * np.array([np.sin(i) for i in idx_long_rad])
+    # Create mean of all cartesian coordinates
+    z_mean_cart = np.mean(idx_z_cart)
+    x_mean_cart = np.mean(idx_x_cart)
+    y_mean_cart = np.mean(idx_y_cart)
+    # Convert mean values back to spherical coordinates so they can be worked with easier
+    lat_mean = np.rad2deg(np.arctan2(z_mean_cart, np.sqrt(y_mean_cart ** 2 + x_mean_cart ** 2)))
+    long_mean = np.rad2deg(np.arctan2(y_mean_cart, x_mean_cart))
+    return (lat_mean, long_mean)
+
+def calc_mean_lat(id):
+    # Get all dataframe entries for this specified user_id
+    idx_df = df[df["user_id"] == id]
+    # Create numpy array from all available latitude values
+    lat_array = idx_df['lat'].to_numpy()
+    # Create mean latitude value from array
+    lat_mean = np.mean(lat_array)
+    return (lat_mean)
+
+def calc_mean_long(id):
+    # Get all dataframe entries for this specified user_id
+    idx_df = df[df["user_id"] == id]
+    # Create numpy array from all available longitude values
+    long_array = idx_df['long'].to_numpy()
+    # Create mean latitude value from array
+    long_mean = np.mean(long_array)
+    return (long_mean)
+
+def calc_mean_loc(id):
+    return (calc_mean_lat(id), calc_mean_long(id))
+
+def create_mean_loc_df():
+    # Create a copy of the main dataframe, so that dataframe doesn't get changed when we drop columns and duplicates
+    df1 = df.copy()
+    # Drop all duplicate user_id entries, the dataframe is then filled only with unique user_ids and their first entry
+    df1 = df1.drop_duplicates(subset=['user_id'])
+    # Create column mean_lat and mean_long and fill it with values from each user
+    df1['mean_lat'] = df1.apply(lambda row: calc_mean_lat(row['user_id']), axis=1)
+    df1['mean_long'] = df1.apply(lambda row: calc_mean_long(row['user_id']), axis=1)
+    # Only focus on the necessary columns
+    df1 = df1[['user_id','mean_lat', 'mean_long']]
+    # Save dataframe so it doesn't have to be calculated all over again
+    df1.to_csv(r'Project3_Data/user_means.txt', index=False)
+    return df1
+
+def get_distance(lat1, lat2, lon1, lon2):
+    # Radius of the earth in kilometers
+    R = 6373.0
+    # Convert each coordinate to radian
+    lat1 = np.radians(lat1)
+    lat2 = np.radians(lat2)
+    lon1 = np.radians(lon1)
+    lon2 = np.radians(lon2)
+    # Calculate difference between radians
+    lon_diff = lon2 - lon1
+    lat_diff = lat2 - lat1
+    # Calculate distance through Haversine formula
+    a = np.sin(lat_diff / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(lon_diff / 2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    return R * c
+
+def find_locations_in_radius(id_lat, id_long, radius):
+    # Copy main dataframe so it doesn't get changed when we add or drop columns and duplicates
+    df1 = df.copy()
+    # We are dropping the duplicates of venue_id as we only need to calculate the distance once for each venue
+    df1 = df1.drop_duplicates(subset=['venue_id'])
+    # Adding new column that contains the distance from the venue to the specified coordinates for each venue
+    df1['dist'] = df1.apply(lambda row: get_distance(row['lat'], id_lat, row['long'], id_long), axis=1)
+    df1 = df1[['venue_id', 'dist']]
+    # We focus only on the venues that are in our specified radius
+    df1 = df1[df1['dist'] < radius]
+    # Return list of all venue_ids in our radius
+    loc_id_list = df1['venue_id'].to_numpy()
+    return loc_id_list
+
+def find_matching_strings(string_list):
+    # Method we need to find the venue_ids (stringd) that are found in each radius (=> eligible venues)
+    # Sort the list of lists string_list in descending length of inner lists
+    string_list.sort(key=len, reverse=True)
+    # We are using masks to iteratively eliminate venue_ids, so we need to start with the "longest" list.
+    # If the longest list doesn't contain a venue_id that is in each of the inner lists then there is no venue_id
+    # that can be found in each of the radii
+    main_list = string_list[0]
+    for i in range(1,5):
+        # Check two "lists" (numpy arrays) if they have matching strings
+        # Here we check every inner list with the main_list (longest list). Main_list loses elements with each iteration
+        mask = np.isin(main_list, string_list[i])
+        main_list = main_list[mask]
+    # Return main_list (might be empty at this point)
+    return main_list
+
+def find_similar_loc_dist(id_array):
+    radius = .5
+    increase_rate = 0
+    lister = []
+    while len(lister) == 0:
+        print("Radius at: ", radius+increase_rate)
+        cmp_list = []
+        for user in id_array:
+            lat1 = calc_mean_lat(user)
+            long1 = calc_mean_long(user)
+            cmp_list.append(find_locations_in_radius(lat1, long1, radius + increase_rate))
+        lister = find_matching_strings(cmp_list)
+        increase_rate = increase_rate + 0.1
+    print("Increase Rate was at ", increase_rate)
+    print("Radius was at ", increase_rate+radius)
+    return lister
+
+### Here ends the block for Task3
 
 if __name__ == '__main__':
     columns = ["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"]
@@ -363,15 +402,32 @@ if __name__ == '__main__':
     #test_list = find_similar_loc_dist(test_id_array)
     #entry = get_dataframe_entries(test_list)
     #print(entry.venue_cat_name)
-    all_words = df['venue_cat_name'].unique()
-    print(all_words)
-    vocab = create_vocab(all_words)
-    vocab = list(dict.fromkeys(vocab))
+
+    #all_words = df['venue_cat_name'].unique()
+    #print(all_words)
+    #vocab = create_vocab(all_words)
+    #vocab = list(dict.fromkeys(vocab))
     #save_cos_dist_matrix(vocab)
-    matrix = np.loadtxt('similarity_matrix.csv', usecols=range(len(vocab)))
-    word = vocab[3]
-    print(vocab)
-    get_most_similar(matrix, vocab, word)
+    #matrix = np.loadtxt('similarity_matrix.csv', usecols=range(len(vocab)))
+    #word = vocab[3]
+    #print(vocab)
+    #get_most_similar(matrix
+
+    df_test = pd.DataFrame([[1100, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+                           [1101, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+                           [1102, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+                           [1103, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+                            [1104, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"]],
+                           columns=["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"])
+    df = df.append(df_test, ignore_index=True)
+    print(df[df["user_id"] == 1100])
+    my_arr = df['user_id'].unique()
+    my_arr.sort()
+    print(my_arr[-1])
+
+    create_location_plot()
+
+    print(calc_mean_loc(1103))
 
 
 
