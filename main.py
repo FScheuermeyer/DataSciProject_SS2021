@@ -15,69 +15,6 @@ from sklearn.manifold import TSNE
 def create_dataframe(file, colnames):
     return pd.read_csv(file, sep='\t', header=None, names=colnames)
 
-def create_vocab(arr):
-    vocab_list = []
-    for elem in arr:
-        word = elem.split()[0].lower()
-        if re.findall('[^A-Za-z]', word):
-            if re.findall('[^A-Za-z]', word) == '-':
-                word = elem.split('-')[0].lower()
-            else:
-                word = 'cafe'
-            continue
-        vocab_list.append(word)
-    return vocab_list
-
-def create_model():
-    model = api.load("glove-wiki-gigaword-50")
-    return model
-
-def cosine_distance(model, word, target_list, num):
-    # TODO: DO urself
-    cosine_dict ={}
-    word_list = []
-    a = model[word]
-    for item in target_list :
-        if item != word :
-            b = model[item]
-            cos_sim = np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))
-            cosine_dict[item] = cos_sim
-    dist_sort=sorted(cosine_dict.items(), key=lambda dist: dist[1],reverse = True) # in descending order
-    for item in dist_sort:
-        word_list.append((item[0], item[1]))
-    return word_list[0:num]
-
-def cosine_distance_calc(vec1, vec2):
-    cos_dist = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-    return cos_dist
-
-def cosine_distance_matrix(vocab, model):
-    n = len(vocab)
-    matrix = np.zeros(shape=(n,n))
-    for i in range(n):
-        for j in range(n):
-            matrix[i][j] = cosine_distance_calc(model[vocab[i]], model[vocab[j]])
-    return matrix
-
-def save_cos_dist_matrix(vocab):
-    my_model = create_model()
-    matrix = cosine_distance_matrix(vocab, my_model)
-    np.savetxt('similarity_matrix.csv', matrix)
-
-def get_most_similar(matrix, vocab, word):
-    index = vocab.index(word)
-    sim = 0
-    res_index = index
-    for i in range(len(vocab)):
-        if index == i:
-            continue
-        tmp = matrix[index][i]
-        if tmp > sim:
-            sim = tmp
-            res_index = i
-    print("For word " + word + ", " + vocab[res_index] + " is the most similar")
-    return vocab[res_index]
-
 # following only for visualization of closest word (T-SNE Vis)
 def display_closestwords_tsnescatterplot(model, word, size):
     # TODO: Do yourself
@@ -173,6 +110,58 @@ def create_users_activity_compare_plot():
     plt.ylabel('Number of userIDs')
     #plt.savefig('compare_user_activity.png')
     plt.show()
+
+### Here starts the block for Task1
+
+def create_vocab(arr):
+    vocab_list = []
+    for elem in arr:
+        word = elem.split()[0].lower()
+        if re.findall('[^A-Za-z]', word):
+            if re.findall('[^A-Za-z]', word) == '-':
+                word = elem.split('-')[0].lower()
+            else:
+                word = 'cafe'
+            continue
+        vocab_list.append(word)
+    return vocab_list
+
+def create_model():
+    model = api.load("glove-wiki-gigaword-50")
+    return model
+
+def cosine_distance_calc(vec1, vec2):
+    cos_dist = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+    return cos_dist
+
+def cosine_distance_matrix(vocab, model):
+    n = len(vocab)
+    matrix = np.zeros(shape=(n,n))
+    for i in range(n):
+        for j in range(n):
+            matrix[i][j] = cosine_distance_calc(model[vocab[i]], model[vocab[j]])
+    return matrix
+
+def save_cos_dist_matrix(vocab):
+    my_model = create_model()
+    matrix = cosine_distance_matrix(vocab, my_model)
+    np.savetxt('similarity_matrix.csv', matrix)
+
+def get_most_similar(matrix, vocab, word):
+    index = vocab.index(word)
+    sim = 0
+    res_index = index
+    for i in range(len(vocab)):
+        if index == i:
+            continue
+        tmp = matrix[index][i]
+        if tmp > sim:
+            sim = tmp
+            res_index = i
+    print("For word " + word + ", " + vocab[res_index] + " is the most similar")
+    return vocab[res_index]
+
+### Here ends the block for Task1
 
 ### Here starts the block for Task2
 
@@ -393,8 +382,7 @@ if __name__ == '__main__':
      #   print("For column ", column, " unique values: ", df[column].nunique())
     #create_users_activity_compare_plot()
     #create_location_plot()
-    #arr = df['venue_cat_name'].unique()
-    #arr = create_vocab(arr)
+
     #model = creater_even_newer_model(arr)
     #print(model.most_similar("Coffee"))
 
@@ -413,21 +401,56 @@ if __name__ == '__main__':
     #print(vocab)
     #get_most_similar(matrix
 
-    df_test = pd.DataFrame([[1100, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-                           [1101, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-                           [1102, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-                           [1103, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-                            [1104, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"]],
-                           columns=["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"])
-    df = df.append(df_test, ignore_index=True)
-    print(df[df["user_id"] == 1100])
-    my_arr = df['user_id'].unique()
-    my_arr.sort()
-    print(my_arr[-1])
+    #df_test = pd.DataFrame([[1100, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+    #                       [1101, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+    #                       [1102, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+    #                       [1103, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
+    #                        [1104, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"]],
+    #                       columns=["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"])
+    #df = df.append(df_test, ignore_index=True)
+    #print(df[df["user_id"] == 1100])
+    #my_arr = df['user_id'].unique()
+    #my_arr.sort()
+    #print(my_arr[-1])
+    #create_location_plot()
+    #print(calc_mean_loc(1103))
 
-    create_location_plot()
+    arr = df['venue_cat_name'].unique()
+    n = len(arr)
+    empty_matrix = np.zeros(shape=(n, n))
+    for i in range(n):
+        for j in range(n):
+            if(i == j):
+                continue
+            words1 = arr[i].split()
+            for word in words1:
+                word.lower()
+                if re.findall('[^A-Za-z]', word):
+                    words1.remove(word)
+            words2 = arr[j].split()
+            for word in words2:
+                word.lower()
+                if re.findall('[^A-Za-z]', word):
+                    words2.remove(word)
+            if(any(word in words2 for word in words1)):
+                print("" + arr[i] + " is similar to " + arr[j])
 
-    print(calc_mean_loc(1103))
+
+
+    vocab = create_vocab(arr)
+    #save_cos_dist_matrix(vocab)
+    one = vocab.index("museum")
+    two = vocab.index("art")
+    three = vocab.index("science")
+    four = vocab.index("history")
+    matrix = np.loadtxt('similarity_matrix.csv')
+    print(matrix.shape)
+    print(matrix[one][two], matrix[one][three], matrix[one][four])
+    # how tf do i fix this
+    # ground work is laid, everything else should be ..easy.. to implement
+    #print(df['venue_cat_name'].nunique())
+    #model = create_model()
+    #print(model["American Restaurant"])
 
 
 
