@@ -130,16 +130,46 @@ def create_model():
     model = api.load("glove-wiki-gigaword-50")
     return model
 
+def get_normalised_first_word(stringer):
+    word = stringer.split()[0].lower()
+    if re.findall('[^A-Za-z]', word):
+        if re.findall('[^A-Za-z]', word) == '-':
+            word = stringer.split('-')[0].lower()
+        else:
+            word = 'cafe'
+    return word
+
 def cosine_distance_calc(vec1, vec2):
     cos_dist = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
     return cos_dist
 
 def cosine_distance_matrix(vocab, model):
     n = len(vocab)
-    matrix = np.zeros(shape=(n,n))
+    matrix = np.zeros(shape=(n, n))
     for i in range(n):
         for j in range(n):
-            matrix[i][j] = cosine_distance_calc(model[vocab[i]], model[vocab[j]])
+            if (i == j):
+                continue
+            words1 = vocab[i].split()
+            for word in words1:
+                word.lower()
+                if re.findall('[^A-Za-z]', word):
+                    words1.remove(word)
+            words2 = vocab[j].split()
+            for word in words2:
+                word.lower()
+                if re.findall('[^A-Za-z]', word):
+                    words2.remove(word)
+            if (any(word in words2 for word in words1)):
+                matrix_value = 1 + cosine_distance_calc(model[get_normalised_first_word(vocab[i])], model[get_normalised_first_word(vocab[j])])
+                matrix_value = matrix_value / 2
+                matrix[i][j] = matrix_value
+    for i in range(n):
+        for j in range(n):
+            if (i == j):
+                continue
+            if (matrix[i][j] == 0):
+                matrix[i][j] = cosine_distance_calc(model[get_normalised_first_word(vocab[i])], model[get_normalised_first_word(vocab[j])])
     return matrix
 
 def save_cos_dist_matrix(vocab):
@@ -160,6 +190,20 @@ def get_most_similar(matrix, vocab, word):
             res_index = i
     print("For word " + word + ", " + vocab[res_index] + " is the most similar")
     return vocab[res_index]
+
+def sort_venues_based_on_similarity(matrix, vocab, word):
+    word_index = vocab.index(word)
+    row = matrix[word_index]
+    sort_dict = {}
+    i = 0
+    for similarity_value in row:
+        sort_dict[vocab[i]] = similarity_value
+        i += 1
+    sorted_list = sorted(sort_dict.items(), key=lambda x: x[1], reverse=True)
+    return_list = []
+    for venue in sorted_list:
+        return_list.append(venue[0])
+    return return_list
 
 ### Here ends the block for Task1
 
@@ -361,6 +405,9 @@ def find_similar_loc_dist(id_array):
 
 ### Here ends the block for Task3
 
+def find_index_in_array(string, array):
+    return array.index(string)
+
 if __name__ == '__main__':
     columns = ["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"]
     df = create_dataframe("Project3_Data/dataset_NYC.txt", columns)
@@ -415,39 +462,18 @@ if __name__ == '__main__':
     #create_location_plot()
     #print(calc_mean_loc(1103))
 
-    arr = df['venue_cat_name'].unique()
-    n = len(arr)
-    empty_matrix = np.zeros(shape=(n, n))
-    for i in range(n):
-        for j in range(n):
-            if(i == j):
-                continue
-            words1 = arr[i].split()
-            for word in words1:
-                word.lower()
-                if re.findall('[^A-Za-z]', word):
-                    words1.remove(word)
-            words2 = arr[j].split()
-            for word in words2:
-                word.lower()
-                if re.findall('[^A-Za-z]', word):
-                    words2.remove(word)
-            if(any(word in words2 for word in words1)):
-                print("" + arr[i] + " is similar to " + arr[j])
-
-
-
-    vocab = create_vocab(arr)
+    vocab = df['venue_cat_name'].unique()
     #save_cos_dist_matrix(vocab)
-    one = vocab.index("museum")
-    two = vocab.index("art")
-    three = vocab.index("science")
-    four = vocab.index("history")
     matrix = np.loadtxt('similarity_matrix.csv')
-    print(matrix.shape)
-    print(matrix[one][two], matrix[one][three], matrix[one][four])
-    # how tf do i fix this
-    # ground work is laid, everything else should be ..easy.. to implement
+    vocab = vocab.tolist()
+    test_word = vocab[53]
+    get_most_similar(matrix, vocab, test_word)
+    print(sort_venues_based_on_similarity(matrix, vocab, test_word))
+    # next steps:
+    # 1. implement first task: Find venues that are of ;MOST-SIMILAR; category, sort them by distance from
+    # mean location of user and finally, from that list, find venues user hasn't visited yet
+    # 2. implement user similarity in the way I specified it in my second submission
+    # 3. fix task3
     #print(df['venue_cat_name'].nunique())
     #model = create_model()
     #print(model["American Restaurant"])
