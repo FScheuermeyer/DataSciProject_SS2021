@@ -1,114 +1,111 @@
 import pandas as pd
 import numpy as np
 import re
-from gensim.models import Word2Vec
 import gensim.downloader as api
-#import seaborn as sns
-#from sklearn.datasets import fetch_mldata
-#from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-
-#https://developer.foursquare.com/docs/build-with-foursquare/categories/
-#https://towardsdatascience.com/a-beginners-guide-to-word-embedding-with-gensim-word2vec-model-5970fa56cc92
 
 def create_dataframe(file, colnames):
     return pd.read_csv(file, sep='\t', header=None, names=colnames)
 
-# following only for visualization of closest word (T-SNE Vis)
-def display_closestwords_tsnescatterplot(model, word, size):
-    # TODO: Do yourself
-    arr = np.empty((0, size), dtype='f')
-    word_labels = [word]
-    close_words = model.similar_by_word(word)
-    arr = np.append(arr, np.array([model[word]]), axis=0)
-    for wrd_score in close_words:
-        wrd_vector = model[wrd_score[0]]
-        word_labels.append(wrd_score[0])
-        arr = np.append(arr, np.array([wrd_vector]), axis=0)
+def create_task1_location_plot_scaled(userID, venue_array):
+    user_lat = calc_mean_lat(userID)
+    user_long = calc_mean_long(userID)
 
-    tsne = TSNE(n_components=2, random_state=0)
-    np.set_printoptions(suppress=True)
-    Y = tsne.fit_transform(arr)
-    x_coords = Y[:, 0]
-    y_coords = Y[:, 1]
-    plt.scatter(x_coords, y_coords)
-    for label, x, y in zip(word_labels, x_coords, y_coords):
-        plt.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
-    plt.xlim(x_coords.min() + 0.00005, x_coords.max() + 0.00005)
-    plt.ylim(y_coords.min() + 0.00005, y_coords.max() + 0.00005)
-    plt.show()
+    plt.scatter(x=(df['long']), y=(df['lat']), alpha=0.1, label="Data Entries", color="pink")
 
-def create_location_plot():
-    #idx_df_bool = df["venue_cat_name"] == "University"
-    #filtered_df = df[idx_df_bool]
-    df1 = create_mean_loc_df()
-    test_id_array = [664, 472, 585, 315, 968]
-    test_list = find_similar_loc_dist(test_id_array)
-    entries = get_dataframe_entries(test_list)
-    print(len(entries), entries.iloc[0].venue_cat_name)
-    #radius = input("Enter Radius Value: ")
-    #radius = float(radius)
-    radius = 1
-    #print(entry.venue_cat_name)
-    #plt.scatter(x=(df['long']), y=(df['lat']), alpha=0.2, label="Data Entries")
-    #plt.scatter(x=(filtered_df['long']), y=(filtered_df['lat']), color='pink', label="Bridge Entries")
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[0], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[0], 'mean_lat'].iloc[0], alpha=0.4, color='coral')
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[1], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[1], 'mean_lat'].iloc[0], alpha=0.4, color='purple')
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[2], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[2], 'mean_lat'].iloc[0], alpha=0.4, color='green')
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[3], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[3], 'mean_lat'].iloc[0], alpha=0.4, color='pink')
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[4], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[4], 'mean_lat'].iloc[0], alpha=0.4, color='orange')
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[0], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[0], 'mean_lat'].iloc[0], color='coral', label="Mean User 1")
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[1], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[1], 'mean_lat'].iloc[0], color='purple', label="Mean User 2")
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[2], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[2], 'mean_lat'].iloc[0], color='green', label="Mean User 3")
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[3], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[3], 'mean_lat'].iloc[0], color='pink', label="Mean User 4")
-    plt.scatter(x=df1.loc[df1['user_id'] == test_id_array[4], 'mean_long'].iloc[0], y=df1.loc[df1['user_id'] == test_id_array[4], 'mean_lat'].iloc[0], color='orange', label="Mean User 5")
-    #plt.scatter(x=entry.long, y=entry.lat, color='red', label="Recommended Location")
-    plt.scatter(x=entries['long'], y=entries['lat'], color='red', label="Recommended Locations")
-    #plt.scatter(x=(df1['mean_long']), y=(df1['mean_lat']), color = 'orange', alpha=0.5, label="Mean Locations")
+    for venue in venue_array:
+        entry = find_entry_in_df(venue)
+        plt.scatter(x=entry["long"], y=entry["lat"], color='blue')
+    plt.scatter(x=user_long, y=user_lat, color="red", label="User Mean")
+
+    plt.title("Specified user mean and recommended locations (Task 1)")
     plt.xlabel('Longitude')
     plt.ylabel('Latidude')
     plt.legend()
-    plt.savefig('locations52.png')
+    #plt.savefig('locations_task1.png')
     plt.show()
 
-def create_users_activity_compare_plot():
-    abc = df['user_id'].value_counts()
-    a = 0
-    b = 0
-    c = 0
-    d = 0
-    e = 0
-    f = 0
-    g = 0
-    for key in abc:
-        if key == 100:
-            a = a + 1
-        if ((key > 100) and (key <= 500)):
-            b = b + 1
-        if key > 500 and key <= 1000:
-            c = c + 1
-        if key > 1000 and key <= 1500:
-            d = d + 1
-        if key > 1500 and key <= 2000:
-            e = e + 1
-        if key > 2000 and key <= 2500:
-            f = f + 1
-        if key > 2500:
-            g = g + 1
-    lister = []
-    lister.append(a)
-    lister.append(b)
-    lister.append(c)
-    lister.append(d)
-    lister.append(e)
-    lister.append(f)
-    lister.append(g)
-    print(lister)
-    plt.hist(abc, bins=7)
-    plt.xlabel('Number of data entries with same userID')
-    plt.ylabel('Number of userIDs')
-    #plt.savefig('compare_user_activity.png')
+def create_task1_location_plot(userID, venue_array):
+    user_lat = calc_mean_lat(userID)
+    user_long = calc_mean_long(userID)
+
+    for venue in venue_array:
+        entry = find_entry_in_df(venue)
+        plt.scatter(x=entry["long"], y=entry["lat"], color='blue')
+    plt.scatter(x=user_long, y=user_lat, color="red", label="User Mean")
+
+    plt.title("Specified user mean and recommended locations (Task 1)")
+    plt.xlabel('Longitude')
+    plt.ylabel('Latidude')
+    plt.legend()
+    #plt.savefig('locations_task1.png')
+    plt.show()
+
+def create_task2_location_plot(userID, user_array):
+    user_lat = calc_mean_lat(userID)
+    user_long = calc_mean_long(userID)
+
+    plt.scatter(x=(df['long']), y=(df['lat']), alpha=0.1, label="Data Entries", color="pink")
+
+    for user in user_array:
+        lat = calc_mean_lat(user)
+        long = calc_mean_long(user)
+        plt.scatter(x=long, y=lat, color='blue')
+    plt.scatter(x=user_long, y=user_lat, color="red", label="User Mean")
+
+    plt.title("Specified user mean and similar user's means (Task 2)")
+    plt.xlabel('Longitude')
+    plt.ylabel('Latidude')
+    plt.legend()
+    #plt.savefig('locations_task2.png')
+    plt.show()
+
+def create_task3_location_plot_scaled(user_array, venue_array):
+    color_array = ["purple", "green", "blue", "yellow", "magenta"]
+
+    plt.scatter(x=(df['long']), y=(df['lat']), alpha=0.1, label="Data Entries", color="pink")
+
+    i = 0
+    for user in user_array:
+        lat = calc_mean_lat(user)
+        long = calc_mean_long(user)
+        label_string = "Mean User " + str((i+1))
+        plt.scatter(x=long, y=lat, color=color_array[i], label=label_string)
+        i += 1
+
+    for venue in venue_array:
+        lat = find_entry_in_df(venue)["lat"]
+        long = find_entry_in_df(venue)["long"]
+        plt.scatter(x=long, y=lat, color="red")
+
+    plt.title("User means and recommended meet-up locations (Task 3) to scale")
+    plt.xlabel('Longitude')
+    plt.ylabel('Latidude')
+    plt.legend()
+    #plt.savefig('locations_task3_scaled.png')
+    plt.show()
+
+def create_task3_location_plot(user_array, venue_array):
+    color_array = ["purple", "green", "blue", "yellow", "magenta"]
+
+    i = 0
+    for user in user_array:
+        lat = calc_mean_lat(user)
+        long = calc_mean_long(user)
+        label_string = "Mean User " + str((i+1))
+        plt.scatter(x=long, y=lat, color=color_array[i], label=label_string)
+        i += 1
+
+    for venue in venue_array:
+        lat = find_entry_in_df(venue)["lat"]
+        long = find_entry_in_df(venue)["long"]
+        plt.scatter(x=long, y=lat, color="red")
+
+    plt.title("User means and recommended meet-up locations (Task 3)")
+    plt.xlabel('Longitude')
+    plt.ylabel('Latidude')
+    plt.legend()
+    #plt.savefig('locations_task3.png')
     plt.show()
 
 ### Here starts the block for Task1
@@ -175,9 +172,10 @@ def cosine_distance_matrix(vocab, model):
 def save_cos_dist_matrix(vocab):
     my_model = create_model()
     matrix = cosine_distance_matrix(vocab, my_model)
-    np.savetxt('similarity_matrix.csv', matrix)
+    np.savetxt('Project3_Data/similarity_matrix.csv', matrix)
 
-def get_most_similar(matrix, vocab, word):
+def get_most_similar(matrix, word):
+    vocab = df['venue_cat_name'].unique().tolist()
     index = vocab.index(word)
     sim = 0
     res_index = index
@@ -191,7 +189,8 @@ def get_most_similar(matrix, vocab, word):
     print("For word " + word + ", " + vocab[res_index] + " is the most similar")
     return vocab[res_index]
 
-def sort_venues_based_on_similarity(matrix, vocab, word):
+def sort_venues_based_on_similarity(matrix, word):
+    vocab = df['venue_cat_name'].unique().tolist()
     word_index = vocab.index(word)
     row = matrix[word_index]
     sort_dict = {}
@@ -204,6 +203,43 @@ def sort_venues_based_on_similarity(matrix, vocab, word):
     for venue in sorted_list:
         return_list.append(venue[0])
     return return_list
+
+def find_venues_from_category(userID, cat):
+    series1 = df.loc[df['venue_cat_name'] == cat]['venue_id']
+    series2 = df.loc[df['user_id'] == userID]['venue_id']
+    result_list = []
+    for entry1 in series1:
+        for entry2 in series2:
+            if entry1 != entry2:
+               result_list.append(entry1)
+    result_list = list(dict.fromkeys(result_list))
+    lat_user = calc_mean_lat(userID)
+    long_user = calc_mean_long(userID)
+    sort_dict = {}
+    for entry in result_list:
+        df_entry = find_entry_in_df(entry)
+        sort_dict[entry] = get_distance(lat_user, df_entry["lat"], long_user, df_entry["long"])
+    sort_dict = dict(sorted(sort_dict.items(), key=lambda item: item[1]))
+    result_list = list(sort_dict.keys())
+    return result_list
+
+def recommend_new_locations(userID, cat, matrix):
+    sorted_cat_list = sort_venues_based_on_similarity(matrix, cat)
+    result_list = []
+    i = 0
+    while len(result_list) < 5:
+        result_list.extend(find_venues_from_category(userID, sorted_cat_list[i]))
+        i += 1
+    if len(result_list) > 5:
+        result_list = result_list[:5]
+    return result_list
+
+def find_entry_in_df(venueID):
+    return df[df["venue_id"] == venueID].iloc[0]
+
+def find_all_entries_in_df(venueID):
+    return df.loc[df["venue_id"] == venueID]
+
 
 ### Here ends the block for Task1
 
@@ -278,9 +314,59 @@ def similar_users(userID, freq_df):
           #  i = i + 1
     print(similar_users)
     for i in similar_users:
-        None
-        #print("User: ", i, ", cat: ", maxCatfreq_df[i], ", max: ", maxValuesfreq_df[i])
+        print("User: ", i, ", cat: ", maxCatfreq_df[i], ", max: ", maxValuesfreq_df[i])
     return similar_users
+
+def find_users_for_category(userID, freq_df, cat):
+    maxValuesfreq_df = freq_df.max(axis=1)
+    maxCatfreq_df = freq_df.idxmax(axis=1)
+    result_dict = {}
+    # little redundant
+    for i, row in freq_df.iterrows():
+        user = i
+        if user == userID:
+            continue
+        individual_cat = maxCatfreq_df[user]
+        if individual_cat == cat:
+            result_dict[user] = maxValuesfreq_df[user]
+    focus_value = freq_df.loc[userID][cat]
+    # sort users based on frequency difference to userIDs freq for this category
+    # iterate over dict and calc absolute difference
+    for key, value in result_dict.items():
+        result_dict[key] = np.abs(focus_value-value)
+    result_dict = dict(sorted(result_dict.items(), key=lambda item: item[1], reverse=True))
+    return result_dict
+
+
+def find_similar_users_final(userID, freq_df, matrix):
+    maxValuesfreq_df = freq_df.max(axis=1)
+    maxCatfreq_df = freq_df.idxmax(axis=1)
+    cat = maxCatfreq_df[userID]
+    max_value = maxValuesfreq_df[userID]
+    print("User: ", userID, ", category: ", cat, ", value for category: ", max_value)
+    similar_users = []
+    for key, value in find_users_for_category(userID, freq_df, cat).items():
+        similar_users.append(key)
+        if len(similar_users) == 10:
+            break
+    if len(similar_users) < 10:
+        category_list = sort_venues_based_on_similarity(matrix, cat)
+        for new_cat in category_list:
+            for key, value in find_users_for_category(userID, freq_df, new_cat).items():
+                similar_users.append(key)
+                if len(similar_users) == 10:
+                    break
+            if len(similar_users) == 10:
+                break
+    return similar_users
+
+def quick_info_user(userID, freq_df):
+    maxValuesfreq_df = freq_df.max(axis=1)
+    maxCatfreq_df = freq_df.idxmax(axis=1)
+    cat = maxCatfreq_df[userID]
+    max_value = maxValuesfreq_df[userID]
+    print("User: ", userID, ", category: ", cat, ", value for category: ", max_value)
+    return
 
 ### Here ends the block for Task2
 
@@ -337,7 +423,7 @@ def create_mean_loc_df():
     # Only focus on the necessary columns
     df1 = df1[['user_id','mean_lat', 'mean_long']]
     # Save dataframe so it doesn't have to be calculated all over again
-    df1.to_csv(r'Project3_Data/user_means.txt', index=False)
+    df1.to_csv(r'Project3_Data/user_means.csv', index=False)
     return df1
 
 def get_distance(lat1, lat2, lon1, lon2):
@@ -387,7 +473,7 @@ def find_matching_strings(string_list):
     return main_list
 
 def find_similar_loc_dist(id_array):
-    radius = .5
+    radius = 2 # .5
     increase_rate = 0
     lister = []
     while len(lister) == 0:
@@ -403,80 +489,97 @@ def find_similar_loc_dist(id_array):
     print("Radius was at ", increase_rate+radius)
     return lister
 
+def find_similar_loc_dist_filtered(id_array):
+    radius = 2 # .5
+    increase_rate = 0
+    lister = []
+    result_list = []
+    while len(lister) == 0:
+        print("Radius at: ", radius+increase_rate)
+        cmp_list = []
+        for user in id_array:
+            lat1 = calc_mean_lat(user)
+            long1 = calc_mean_long(user)
+            cmp_list.append(find_locations_in_radius(lat1, long1, radius + increase_rate))
+        lister = find_matching_strings(cmp_list)
+        increase_rate = increase_rate + 0.1
+        for venue in lister:
+            category = find_entry_in_df(venue)["venue_cat_name"]
+            if "Restaurant" in category:
+                result_list.append(venue)
+        if result_list == 0:
+            lister = []
+    print("Increase Rate was at ", increase_rate)
+    print("Radius was at ", increase_rate+radius)
+    return result_list
+
 ### Here ends the block for Task3
 
 def find_index_in_array(string, array):
     return array.index(string)
 
 if __name__ == '__main__':
+
+    ### Necessary starts
+
     columns = ["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"]
     df = create_dataframe("Project3_Data/dataset_NYC.txt", columns)
     user_col = ["user_id", "ls_cats", "mean_loc"]
-    #df_users = -1
-    #model = create_model(create_listoflists())
-    #list_of_unique_venue_cat = list(df.venue_cat_name.unique())
-    #print(cosine_distance(model, 'Subway', list_of_unique_venue_cat, 5))
-    #display_closestwords_tsnescatterplot(model, 'Subway', 50)
-    #freq_df = pd.read_csv("Project3_Data/df_freq.csv", index_col=0)
-    #freq_df = calc_freuqency_df()
-    #similar_users(382, freq_df)
-    #print(freq_df.loc[470])
-    #for users in maxValuesfreq_df.index:
+    # freq_df = calc_freuqency_df()
+    freq_df = pd.read_csv("Project3_Data/df_freq.csv", index_col=0)
+    # save_cos_dist_matrix(vocab)
+    matrix = np.loadtxt('Project3_Data/similarity_matrix.csv')
+    # mean_loc_df = create_mean_loc_df()
+    mean_loc_df = pd.read_csv('Project3_Data/user_means.csv')
 
-    #for user in df.user_id:
-    #    print(calc_mean_loc(user))
-    #for column in df.columns:
-     #   print("For column ", column, " unique values: ", df[column].nunique())
-    #create_users_activity_compare_plot()
-    #create_location_plot()
+    ### Setting up testing-enviornment
 
-    #model = creater_even_newer_model(arr)
-    #print(model.most_similar("Coffee"))
+    test_user = 420
+    test_word = "Building"
 
-    #test_id_array = [470, 979, 69, 395, 87]
-    #test_list = find_similar_loc_dist(test_id_array)
-    #entry = get_dataframe_entries(test_list)
-    #print(entry.venue_cat_name)
+    get_most_similar(matrix, test_word)
+    sorted_test_list = sort_venues_based_on_similarity(matrix, test_word)
+    print(sort_venues_based_on_similarity(matrix, test_word))
 
-    #all_words = df['venue_cat_name'].unique()
-    #print(all_words)
-    #vocab = create_vocab(all_words)
-    #vocab = list(dict.fromkeys(vocab))
-    #save_cos_dist_matrix(vocab)
-    #matrix = np.loadtxt('similarity_matrix.csv', usecols=range(len(vocab)))
-    #word = vocab[3]
-    #print(vocab)
-    #get_most_similar(matrix
 
-    #df_test = pd.DataFrame([[1100, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-    #                       [1101, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -74.3, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-    #                       [1102, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 41, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-    #                       [1103, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"],
-    #                        [1104, "4cd544d894848cfa6a0de5b1", "4bf58dd8d48988d103941735", "Home (private)", 40.55, -73.7, -240, "Tue Apr 03 19:20:46 +0000 2012"]],
-    #                       columns=["user_id", "venue_id", "venue_cat_id", "venue_cat_name", "lat", "long", "tmz_offset", "utc_time"])
-    #df = df.append(df_test, ignore_index=True)
-    #print(df[df["user_id"] == 1100])
-    #my_arr = df['user_id'].unique()
-    #my_arr.sort()
-    #print(my_arr[-1])
-    #create_location_plot()
-    #print(calc_mean_loc(1103))
+    ### Task 1 Working Test
 
-    vocab = df['venue_cat_name'].unique()
-    #save_cos_dist_matrix(vocab)
-    matrix = np.loadtxt('similarity_matrix.csv')
-    vocab = vocab.tolist()
-    test_word = vocab[53]
-    get_most_similar(matrix, vocab, test_word)
-    print(sort_venues_based_on_similarity(matrix, vocab, test_word))
-    # next steps:
-    # 1. implement first task: Find venues that are of ;MOST-SIMILAR; category, sort them by distance from
-    # mean location of user and finally, from that list, find venues user hasn't visited yet
-    # 2. implement user similarity in the way I specified it in my second submission
-    # 3. fix task3
-    #print(df['venue_cat_name'].nunique())
-    #model = create_model()
-    #print(model["American Restaurant"])
+    task1_result = recommend_new_locations(test_user, test_word, matrix)
+    print(task1_result)
+
+    create_task1_location_plot(test_user, task1_result)
+    create_task1_location_plot_scaled(test_user,task1_result)
+
+    #for venue in task1_result:
+    #    print(find_all_entries_in_df(venue))
+
+    ### Task 1 Working Test End
+
+
+    ### Task 2 Working Test
+
+    task2_result = find_similar_users_final(test_user, freq_df, matrix)
+    print(task2_result)
+
+    create_task2_location_plot(test_user, task2_result)
+
+    for user in task2_result:
+        quick_info_user(user, freq_df)
+
+    ### Task 2 Working Test End
+
+
+    ### Task 3 Working Test
+
+    task3_result = find_similar_loc_dist(task2_result[:5])
+    print(task3_result)
+    create_task3_location_plot(task2_result[:5], task3_result)
+    create_task3_location_plot_scaled(task2_result[:5], task3_result)
+
+    for venue in task3_result:
+        print(find_entry_in_df(venue)["venue_cat_name"])
+
+    ### Task 3 Working Test End
 
 
 
